@@ -1,14 +1,20 @@
 # Kaoyan 11408 Study Dashboard
 
-公网部署的 11408 二战私人学习驾驶舱，目标是支持每日规划、学习计时、学习记录和阶段复盘。
+一个面向二战考研的私人 11408 学习驾驶舱，支持每日规划、学习计时、学习记录、周复盘和目标差距追踪。当前目标基线：
+
+- 一战成绩：政治 64、英语 46、数学 74、408 83，总分 267
+- 二战目标：总分 330，数学 110，408 100，默认政治 65、英语 55
+- 核心策略：数学主攻，英语不断档，408 稳步提分
 
 ## 技术栈
 
-- Backend: FastAPI, SQLAlchemy, MySQL, JWT
-- Frontend: Vue 3, Vite, TypeScript
-- Deploy: Docker Compose
+- Frontend: Vue 3, Vite, TypeScript, Pinia, Axios, lucide-vue-next
+- Backend: FastAPI, SQLAlchemy, Alembic, MySQL, JWT
+- Deploy: Docker Compose, Nginx
 
-## 后端本地开发
+## 本地开发
+
+### 后端
 
 ```powershell
 cd backend
@@ -20,9 +26,19 @@ Copy-Item ..\.env.example ..\.env
 
 默认后端地址：`http://127.0.0.1:8000`
 
-## Docker Compose 启动
+### 前端
 
-当前 Compose 已包含 `mysql` 和 `backend`，前端服务会在 Vue 页面实现后接入。
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+默认前端地址：`http://127.0.0.1:5173`
+
+开发模式下 Vite 会把 `/api` 和 `/health` 代理到本地 FastAPI。
+
+## Docker Compose 启动
 
 ```powershell
 Copy-Item .env.example .env
@@ -31,37 +47,71 @@ docker compose up --build
 
 启动后：
 
+- Frontend: `http://127.0.0.1:8080`
 - Backend: `http://127.0.0.1:8000`
 - Health check: `http://127.0.0.1:8000/health`
 - MySQL: `127.0.0.1:3306`
 
+Docker 模式下前端由 Nginx 托管，并把 `/api` 反向代理到 `backend:8000`。
+
+## 默认账号
+
+默认管理员来自环境变量：
+
+- `INITIAL_ADMIN_USERNAME=admin`
+- `INITIAL_ADMIN_PASSWORD=change-me-now`
+
+公网部署前必须修改 `.env` 中的 `JWT_SECRET` 和默认管理员密码。
+
 ## 环境变量
 
-复制 `.env.example` 为 `.env` 后修改：
+复制 `.env.example` 为 `.env` 后按需修改：
 
-- `DATABASE_URL`: MySQL 连接串
+- `DATABASE_URL`: 本地后端直连 MySQL 时使用的连接串
 - `MYSQL_DATABASE`: Docker Compose MySQL 数据库名
 - `MYSQL_USER`: Docker Compose MySQL 用户名
 - `MYSQL_PASSWORD`: Docker Compose MySQL 密码
 - `MYSQL_ROOT_PASSWORD`: Docker Compose MySQL root 密码
-- `JWT_SECRET`: JWT 密钥，公网部署前必须替换
+- `MYSQL_PORT`: MySQL 暴露端口
+- `BACKEND_PORT`: 后端暴露端口
+- `FRONTEND_PORT`: 前端暴露端口
+- `JWT_SECRET`: JWT 密钥
 - `INITIAL_ADMIN_USERNAME`: 初始管理员用户名
 - `INITIAL_ADMIN_PASSWORD`: 初始管理员密码
+- `CORS_ORIGINS`: 允许跨域访问的前端地址
 
-## 测试
+## 数据库迁移
+
+后端使用 Alembic 管理数据库结构。Docker 启动时会自动执行：
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m alembic upgrade head
+```
+
+## 测试与构建
+
+后端测试：
 
 ```powershell
 cd backend
 .\.venv\Scripts\python -m pytest
 ```
 
-## 数据库迁移
-
-后端使用 Alembic 管理数据库结构。Docker 启动时会自动执行 `alembic upgrade head`。
-
-本地手动执行：
+前端生产构建：
 
 ```powershell
-cd backend
-.\.venv\Scripts\python -m alembic upgrade head
+cd frontend
+npm run build
 ```
+
+## 公网部署建议
+
+第一版推荐用一台云服务器部署 Docker Compose：
+
+1. 安装 Docker 和 Docker Compose。
+2. 拉取仓库并复制 `.env.example` 为 `.env`。
+3. 修改 `JWT_SECRET`、数据库密码、管理员密码。
+4. 执行 `docker compose up -d --build`。
+5. 用服务器 Nginx、Caddy 或宝塔反向代理域名到 `127.0.0.1:${FRONTEND_PORT}`。
+6. 配置 HTTPS 证书，只暴露前端入口；后端和 MySQL 不直接暴露到公网。
