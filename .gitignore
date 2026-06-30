@@ -13,4 +13,4 @@ node_modules/
 .vscode/
 *.sqlite3
 *.db
-
+*.egg-info/
