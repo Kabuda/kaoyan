@@ -54,3 +54,14 @@ docker compose up --build
 cd backend
 .\.venv\Scripts\python -m pytest
 ```
+
+## 数据库迁移
+
+后端使用 Alembic 管理数据库结构。Docker 启动时会自动执行 `alembic upgrade head`。
+
+本地手动执行：
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m alembic upgrade head
+```
