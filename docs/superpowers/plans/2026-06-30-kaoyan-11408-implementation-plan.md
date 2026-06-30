@@ -60,7 +60,7 @@
 任务：
 
 - 配置环境变量读取。
-- 配置 PostgreSQL 数据库连接。
+- 配置 MySQL 数据库连接。
 - 配置 SQLAlchemy session。
 - 定义 `User` 模型。
 - 实现密码哈希和校验。
@@ -289,14 +289,14 @@
 - 创建 `backend/Dockerfile`。
 - 创建 `frontend/Dockerfile`。
 - 创建根目录 `docker-compose.yml`。
-- 配置 postgres volume。
+- 配置 mysql volume。
 - 配置后端环境变量。
 - 配置前端构建产物服务。
 - 补充 `.env.example`。
 
 服务：
 
-- `postgres`
+- `mysql`
 - `backend`
 - `frontend`
 
@@ -304,7 +304,7 @@
 
 - `docker compose up --build` 可以启动完整系统。
 - 前端能访问后端。
-- 后端能连接 PostgreSQL。
+- 后端能连接 MySQL。
 - 管理员账号可登录。
 
 ## 阶段 10：测试、文档与最终验证
