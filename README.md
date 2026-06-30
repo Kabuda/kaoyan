@@ -79,6 +79,12 @@ Docker 模式下前端由 Nginx 托管，并把 `/api` 反向代理到 `backend:
 - `INITIAL_ADMIN_USERNAME`: 初始管理员用户名
 - `INITIAL_ADMIN_PASSWORD`: 初始管理员密码
 - `CORS_ORIGINS`: 允许跨域访问的前端地址
+- `UPLOAD_DIR`: 题目图片上传目录
+- `MAX_UPLOAD_BYTES`: 单张图片大小限制，默认 8MB
+- `ARK_API_KEY`: 火山方舟 API Key；不配置时图片会保存，但 Doubao 分析会跳过
+- `ARK_BASE_URL`: 火山方舟 OpenAI 兼容接口地址
+- `ARK_VISION_MODEL`: Doubao 图片理解模型
+- `ARK_TEXT_MODEL`: Doubao 每日复盘文本模型
 
 ## 数据库迁移
 

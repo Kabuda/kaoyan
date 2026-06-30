@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.routes_auth import router as auth_router
 from app.api.routes_profile import router as profile_router
 from app.api.routes_records import router as records_router
+from app.api.routes_reviews import daily_router as daily_reviews_router
 from app.api.routes_reviews import router as reviews_router
 from app.api.routes_stats import router as stats_router
 from app.api.routes_tasks import router as tasks_router
@@ -15,7 +16,15 @@ from app.api.routes_timer import router as timer_router
 from app.core.config import get_settings
 from app.core.database import Base, engine
 from app.core.security import get_password_hash
-from app.models import ExamProfile, StudyRecord, StudyTask, TimerSession, WeeklyReview
+from app.models import (
+    DailyReview,
+    ExamProfile,
+    StudyRecord,
+    StudyRecordImage,
+    StudyTask,
+    TimerSession,
+    WeeklyReview,
+)
 from app.models.user import User
 
 
@@ -58,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(records_router, prefix="/api")
     app.include_router(stats_router, prefix="/api")
     app.include_router(reviews_router, prefix="/api")
+    app.include_router(daily_reviews_router, prefix="/api")
 
     @app.get("/health")
     def health() -> dict[str, str]:

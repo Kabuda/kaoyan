@@ -3,9 +3,12 @@ import { defineStore } from "pinia";
 import { api } from "@/api/client";
 import type {
   DashboardStats,
+  DailyReview,
   ExamProfile,
   StudyRecord,
+  StudyRecordImage,
   StudyTask,
+  TimerFinishWithImagesResponse,
   TimerSession,
   WeeklyReview
 } from "@/types/api";
@@ -16,6 +19,8 @@ interface StudyState {
   tasks: StudyTask[];
   timer: TimerSession | null;
   records: StudyRecord[];
+  latestImageAnalyses: StudyRecordImage[];
+  dailyReviews: DailyReview[];
   reviews: WeeklyReview[];
   loading: boolean;
 }
@@ -29,6 +34,8 @@ export const useStudyStore = defineStore("study", {
     tasks: [],
     timer: null,
     records: [],
+    latestImageAnalyses: [],
+    dailyReviews: [],
     reviews: [],
     loading: false
   }),
@@ -48,6 +55,7 @@ export const useStudyStore = defineStore("study", {
           this.loadTasks(date),
           this.loadTimer(),
           this.loadRecords(),
+          this.loadDailyReviews(date),
           this.loadReviews()
         ]);
       } finally {
@@ -118,6 +126,20 @@ export const useStudyStore = defineStore("study", {
       this.timer = null;
       await Promise.all([this.loadTasks(), this.loadStats(), this.loadRecords()]);
     },
+    async finishTimerWithImages(summary: string, files: File[], blockers = "", quality = "medium") {
+      const form = new FormData();
+      form.append("summary", summary);
+      form.append("blockers", blockers);
+      form.append("quality", quality);
+      files.forEach((file) => form.append("files", file));
+      const { data } = await api.post<TimerFinishWithImagesResponse>("/api/timer/finish-with-images", form, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      this.timer = null;
+      this.latestImageAnalyses = data.images;
+      await Promise.all([this.loadTasks(), this.loadStats(), this.loadRecords(), this.loadDailyReviews()]);
+      return data;
+    },
     async loadRecords() {
       const { data } = await api.get<StudyRecord[]>("/api/records");
       this.records = data;
@@ -125,6 +147,25 @@ export const useStudyStore = defineStore("study", {
     async createRecord(payload: Partial<StudyRecord>) {
       await api.post("/api/records", payload);
       await Promise.all([this.loadRecords(), this.loadStats()]);
+    },
+    async uploadRecordImages(recordId: number, files: File[]) {
+      const form = new FormData();
+      files.forEach((file) => form.append("files", file));
+      const { data } = await api.post<StudyRecordImage[]>(`/api/records/${recordId}/images`, form, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      this.latestImageAnalyses = data;
+      await this.loadRecords();
+      return data;
+    },
+    async loadDailyReviews(date?: string) {
+      const { data } = await api.get<DailyReview[]>("/api/reviews/daily", { params: date ? { date } : {} });
+      this.dailyReviews = data;
+    },
+    async generateDailyReview(date = todayISO()) {
+      const { data } = await api.post<DailyReview>("/api/reviews/daily/generate", null, { params: { date } });
+      await this.loadDailyReviews(date);
+      return data;
     },
     async loadReviews() {
       const { data } = await api.get<WeeklyReview[]>("/api/reviews/weekly");

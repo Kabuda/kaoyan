@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     initial_admin_username: str = "admin"
     initial_admin_password: str = Field(default="change-me-now", min_length=8)
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
+    upload_dir: str = "uploads"
+    max_upload_bytes: int = 8 * 1024 * 1024
+    ark_api_key: str = ""
+    ark_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
+    ark_vision_model: str = "doubao-1-5-vision-pro-32k-250115"
+    ark_text_model: str = "doubao-1-5-pro-32k-250115"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

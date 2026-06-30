@@ -1,15 +1,23 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.api.routes_tasks import get_user_task
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.study import StudyRecord, StudyTask, TimerSession
 from app.models.user import User
-from app.schemas.study import TimerFinishRequest, TimerSessionResponse, TimerStartRequest
+from app.schemas.study import (
+    TimerFinishRequest,
+    TimerFinishWithImagesResponse,
+    TimerSessionResponse,
+    TimerStartRequest,
+)
+from app.services.doubao import DoubaoService
+from app.services.record_images import save_and_analyze_uploads
 
 router = APIRouter(prefix="/timer", tags=["timer"])
 
@@ -102,6 +110,38 @@ def finish_timer(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, int]:
+    record = finish_current_timer(payload=payload, current_user=current_user, db=db)
+    return {"record_id": record.id, "duration_minutes": record.duration_minutes}
+
+
+@router.post("/finish-with-images", response_model=TimerFinishWithImagesResponse)
+def finish_timer_with_images(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    summary: str = Form(default=""),
+    blockers: str = Form(default=""),
+    quality: str = Form(default="medium"),
+    files: list[UploadFile] | None = File(default=None),
+) -> TimerFinishWithImagesResponse:
+    payload = TimerFinishRequest(summary=summary, blockers=blockers, quality=quality)
+    record = finish_current_timer(payload=payload, current_user=current_user, db=db)
+    settings = get_settings()
+    images = save_and_analyze_uploads(
+        db=db,
+        settings=settings,
+        doubao=DoubaoService(settings),
+        user_id=current_user.id,
+        record=record,
+        files=files or [],
+    )
+    return TimerFinishWithImagesResponse(record=record, images=images)
+
+
+def finish_current_timer(
+    payload: TimerFinishRequest,
+    current_user: User,
+    db: Session,
+) -> StudyRecord:
     timer = current_timer(db, current_user.id)
     if timer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timer not found")
@@ -136,5 +176,4 @@ def finish_timer(
     db.add_all([task, timer, record])
     db.commit()
     db.refresh(record)
-    return {"record_id": record.id, "duration_minutes": duration_minutes}
-
+    return record

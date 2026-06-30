@@ -39,3 +39,18 @@ class WeeklyReviewResponse(WeeklyReviewBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class DailyReviewResponse(BaseModel):
+    id: int
+    user_id: int
+    review_date: date
+    summary: str
+    completed_content: str
+    weak_points: str
+    next_actions: str
+    source_record_ids: str
+    model_status: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

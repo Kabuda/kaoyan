@@ -34,6 +34,14 @@ services:
       INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      UPLOAD_DIR: ${UPLOAD_DIR:-uploads}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-8388608}
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      ARK_BASE_URL: ${ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
+      ARK_VISION_MODEL: ${ARK_VISION_MODEL}
+      ARK_TEXT_MODEL: ${ARK_TEXT_MODEL}
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -64,5 +72,6 @@ services:
 
 volumes:
   mysql_data:
+  uploads_data:
   caddy_data:
   caddy_config:

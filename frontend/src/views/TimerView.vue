@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pause, Play, Square } from "lucide-vue-next";
+import { ImagePlus, Pause, Play, Sparkles, Square, X } from "lucide-vue-next";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import AppShell from "@/components/AppShell.vue";
@@ -8,6 +8,9 @@ import { useStudyStore } from "@/stores/study";
 const study = useStudyStore();
 const now = ref(Date.now());
 const summary = ref("");
+const selectedFiles = ref<File[]>([]);
+const analysisLoading = ref(false);
+const finishError = ref("");
 let ticker: number | undefined;
 
 onMounted(async () => {
@@ -31,6 +34,34 @@ const timerText = computed(() => {
   const s = String(elapsed.value % 60).padStart(2, "0");
   return `${h}:${m}:${s}`;
 });
+
+const onFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  selectedFiles.value = Array.from(input.files || []);
+};
+
+const removeFile = (index: number) => {
+  selectedFiles.value = selectedFiles.value.filter((_, currentIndex) => currentIndex !== index);
+};
+
+const finishWithImages = async () => {
+  finishError.value = "";
+  analysisLoading.value = true;
+  try {
+    if (selectedFiles.value.length) {
+      await study.finishTimerWithImages(summary.value || "完成一次专注学习。", selectedFiles.value);
+    } else {
+      await study.finishTimer(summary.value || "完成一次专注学习。");
+      study.latestImageAnalyses = [];
+    }
+    selectedFiles.value = [];
+    summary.value = "";
+  } catch {
+    finishError.value = "结束计时失败，请检查图片格式或稍后重试。";
+  } finally {
+    analysisLoading.value = false;
+  }
+};
 </script>
 
 <template>
@@ -59,15 +90,50 @@ const timerText = computed(() => {
             <Play :size="20" />
             继续
           </button>
-          <button class="primary-pill" :disabled="!study.timer" @click="study.finishTimer(summary || '完成一次专注学习。')">
+          <button class="primary-pill" :disabled="!study.timer || analysisLoading" @click="finishWithImages">
             <Square :size="16" />
-            结束并记录
+            {{ selectedFiles.length ? "结束并分析" : "结束并记录" }}
           </button>
         </div>
         <label class="note-box">
           <span>结束记录</span>
           <textarea v-model="summary" rows="5" placeholder="这次解决了什么？卡在哪里？下一次从哪里继续？" />
         </label>
+        <div class="upload-box">
+          <label class="upload-control">
+            <ImagePlus :size="18" />
+            上传完成题目图片
+            <input type="file" accept="image/png,image/jpeg,image/webp" multiple @change="onFileChange" />
+          </label>
+          <div v-if="selectedFiles.length" class="file-list">
+            <div v-for="(file, index) in selectedFiles" :key="file.name + index">
+              <span>{{ file.name }}</span>
+              <button type="button" class="icon-button" @click="removeFile(index)">
+                <X :size="15" />
+              </button>
+            </div>
+          </div>
+          <p v-if="finishError" class="form-error">{{ finishError }}</p>
+        </div>
+        <div v-if="study.latestImageAnalyses.length" class="analysis-list">
+          <div class="panel-heading compact-heading">
+            <div>
+              <h2>Doubao 分析</h2>
+              <span>本次题目图片分析结果</span>
+            </div>
+            <Sparkles :size="18" />
+          </div>
+          <article v-for="image in study.latestImageAnalyses" :key="image.id" class="analysis-card">
+            <div>
+              <strong>{{ image.original_filename }}</strong>
+              <span class="tag" :class="image.analysis_status === 'completed' ? 'tag-english' : 'tag-computer'">
+                {{ image.analysis_status === "completed" ? "已分析" : image.analysis_status === "skipped" ? "待配置" : "失败" }}
+              </span>
+            </div>
+            <p>{{ image.analysis_text }}</p>
+            <small v-if="image.suggestions">建议：{{ image.suggestions }}</small>
+          </article>
+        </div>
       </section>
 
       <section class="panel">

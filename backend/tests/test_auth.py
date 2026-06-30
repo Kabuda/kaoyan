@@ -4,6 +4,7 @@ os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 os.environ["JWT_SECRET"] = "test-secret-for-kaoyan-auth"
 os.environ["INITIAL_ADMIN_USERNAME"] = "admin"
 os.environ["INITIAL_ADMIN_PASSWORD"] = "change-me-now"
+os.environ["UPLOAD_DIR"] = "test_uploads"
 
 from fastapi.testclient import TestClient
 
@@ -51,4 +52,3 @@ def test_login_rejects_bad_password() -> None:
         )
 
     assert response.status_code == 401
-

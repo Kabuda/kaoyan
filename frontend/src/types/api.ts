@@ -75,6 +75,29 @@ export interface StudyRecord {
   updated_at: string;
 }
 
+export interface StudyRecordImage {
+  id: number;
+  user_id: number;
+  record_id: number;
+  original_filename: string;
+  stored_path: string;
+  content_type: string;
+  file_size: number;
+  analysis_status: "pending" | "completed" | "failed" | "skipped" | string;
+  analysis_text: string;
+  knowledge_points: string;
+  mistakes: string;
+  suggestions: string;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TimerFinishWithImagesResponse {
+  record: StudyRecord;
+  images: StudyRecordImage[];
+}
+
 export interface TrendPoint {
   date: string;
   minutes: number;
@@ -114,6 +137,20 @@ export interface WeeklyReview {
   computer_review: string;
   politics_review: string;
   next_week_adjustment: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyReview {
+  id: number;
+  user_id: number;
+  review_date: string;
+  summary: string;
+  completed_content: string;
+  weak_points: string;
+  next_actions: string;
+  source_record_ids: string;
+  model_status: "completed" | "fallback" | "failed" | string;
   created_at: string;
   updated_at: string;
 }

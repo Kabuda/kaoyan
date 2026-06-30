@@ -5,6 +5,7 @@ os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 os.environ["JWT_SECRET"] = "test-secret-for-kaoyan-study-flow"
 os.environ["INITIAL_ADMIN_USERNAME"] = "admin"
 os.environ["INITIAL_ADMIN_PASSWORD"] = "change-me-now"
+os.environ["UPLOAD_DIR"] = "test_uploads"
 
 from fastapi.testclient import TestClient
 
@@ -159,3 +160,85 @@ def test_weekly_review_crud() -> None:
     assert list_response.status_code == 200
     assert any(item["id"] == review_id for item in list_response.json())
 
+
+def test_finish_timer_with_image_without_api_key_creates_analysis_placeholder() -> None:
+    with TestClient(app) as client:
+        headers = auth_headers(client)
+        task_response = client.post(
+            "/api/tasks",
+            json={
+                "plan_date": datetime.now(UTC).date().isoformat(),
+                "subject": "math",
+                "module": "advanced_math",
+                "title": "定积分应用题",
+                "task_type": "practice",
+                "estimated_minutes": 90,
+                "priority": 1,
+            },
+            headers=headers,
+        )
+        assert task_response.status_code == 201
+        task_id = task_response.json()["id"]
+
+        start_response = client.post("/api/timer/start", json={"task_id": task_id}, headers=headers)
+        assert start_response.status_code == 201
+
+        finish_response = client.post(
+            "/api/timer/finish-with-images",
+            data={"summary": "完成定积分应用题", "blockers": "", "quality": "medium"},
+            files=[("files", ("problem.png", b"fake image bytes", "image/png"))],
+            headers=headers,
+        )
+
+    assert finish_response.status_code == 200
+    body = finish_response.json()
+    assert body["record"]["title"] == "定积分应用题"
+    assert len(body["images"]) == 1
+    assert body["images"][0]["analysis_status"] == "skipped"
+
+
+def test_upload_images_to_existing_record_and_generate_daily_review() -> None:
+    now = datetime.now(UTC)
+    with TestClient(app) as client:
+        headers = auth_headers(client)
+        record_response = client.post(
+            "/api/records",
+            json={
+                "subject": "408",
+                "module": "data_structure",
+                "task_type": "manual",
+                "title": "树的遍历错题",
+                "started_at": (now - timedelta(minutes=45)).isoformat(),
+                "ended_at": now.isoformat(),
+                "duration_minutes": 45,
+                "summary": "补录一组树遍历题",
+                "quality": "medium",
+            },
+            headers=headers,
+        )
+        assert record_response.status_code == 201
+        record_id = record_response.json()["id"]
+
+        image_response = client.post(
+            f"/api/records/{record_id}/images",
+            files=[("files", ("tree.webp", b"fake webp bytes", "image/webp"))],
+            headers=headers,
+        )
+        assert image_response.status_code == 200
+        assert image_response.json()[0]["record_id"] == record_id
+
+        review_response = client.post(
+            f"/api/reviews/daily/generate?date={now.date().isoformat()}",
+            headers=headers,
+        )
+        list_response = client.get(
+            f"/api/reviews/daily?date={now.date().isoformat()}",
+            headers=headers,
+        )
+
+    assert review_response.status_code == 200
+    review = review_response.json()
+    assert review["model_status"] == "fallback"
+    assert "树的遍历错题" in review["completed_content"]
+    assert list_response.status_code == 200
+    assert len(list_response.json()) >= 1

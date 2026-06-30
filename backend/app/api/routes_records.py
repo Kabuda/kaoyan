@@ -1,15 +1,23 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.study import StudyRecord
+from app.models.study import StudyRecord, StudyRecordImage
 from app.models.user import User
-from app.schemas.study import StudyRecordCreate, StudyRecordResponse, StudyRecordUpdate
+from app.schemas.study import (
+    StudyRecordCreate,
+    StudyRecordImageResponse,
+    StudyRecordResponse,
+    StudyRecordUpdate,
+)
+from app.services.doubao import DoubaoService
+from app.services.record_images import save_and_analyze_uploads
 
 router = APIRouter(prefix="/records", tags=["records"])
 
@@ -88,3 +96,36 @@ def delete_record(
     db.delete(record)
     db.commit()
 
+
+@router.get("/{record_id}/images", response_model=list[StudyRecordImageResponse])
+def list_record_images(
+    record_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[StudyRecordImage]:
+    get_user_record(db, current_user.id, record_id)
+    return (
+        db.query(StudyRecordImage)
+        .filter(StudyRecordImage.record_id == record_id, StudyRecordImage.user_id == current_user.id)
+        .order_by(StudyRecordImage.id)
+        .all()
+    )
+
+
+@router.post("/{record_id}/images", response_model=list[StudyRecordImageResponse])
+def upload_record_images(
+    record_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    files: list[UploadFile] = File(...),
+) -> list[StudyRecordImage]:
+    record = get_user_record(db, current_user.id, record_id)
+    settings = get_settings()
+    return save_and_analyze_uploads(
+        db=db,
+        settings=settings,
+        doubao=DoubaoService(settings),
+        user_id=current_user.id,
+        record=record,
+        files=files,
+    )

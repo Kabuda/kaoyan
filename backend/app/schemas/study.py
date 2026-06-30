@@ -122,3 +122,27 @@ class StudyRecordResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class StudyRecordImageResponse(BaseModel):
+    id: int
+    user_id: int
+    record_id: int
+    original_filename: str
+    stored_path: str
+    content_type: str
+    file_size: int
+    analysis_status: str
+    analysis_text: str
+    knowledge_points: str
+    mistakes: str
+    suggestions: str
+    error_message: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TimerFinishWithImagesResponse(BaseModel):
+    record: StudyRecordResponse
+    images: list[StudyRecordImageResponse]

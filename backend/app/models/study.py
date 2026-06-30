@@ -87,3 +87,31 @@ class StudyRecord(Base):
         nullable=False,
     )
 
+
+class StudyRecordImage(Base):
+    __tablename__ = "study_record_images"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    record_id: Mapped[int] = mapped_column(ForeignKey("study_records.id"), index=True, nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    stored_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    analysis_status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    analysis_text: Mapped[str] = mapped_column(Text, default="")
+    knowledge_points: Mapped[str] = mapped_column(Text, default="[]")
+    mistakes: Mapped[str] = mapped_column(Text, default="[]")
+    suggestions: Mapped[str] = mapped_column(Text, default="[]")
+    error_message: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
